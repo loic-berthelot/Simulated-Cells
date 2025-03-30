@@ -23,9 +23,20 @@ void Environment::evolve() {
 	}
 	for (int i = 0; i < cells.size(); i++) {
 		cells[i]->distributeResources();
-		cells[i]->updateForces();
-		cells[i]->move();
-		cells[i]->checkHealth();
+	}
+	for (int i = 0; i < cells.size(); i++) {
+		cells[i]->duplicate();
+	}
+	const int movementIterations = 3;
+	for (int j = 0; j < movementIterations; j++) {
+		for (int i = 0; i < cells.size(); i++) {
+			cells[i]->updateForces();
+			cells[i]->move();
+			cells[i]->checkHealth();
+		}
+	}
+	for (int i = 0; i < cells.size(); i++) {
+		cells[i]->checkLifetime();
 	}
 }
 

@@ -50,10 +50,10 @@ Button* button_nightEnabled;
 
 void init() {
 	//parameters
-	SIZE = sf::Vector2f(1000, 1000);
+	SIZE = sf::Vector2f(5000, 5000);
 	mapName = "background5";
-	cellsNumber = 200;
-	initialMutations = 8;
+	cellsNumber = 2500;
+	initialMutations = 0;
 
 	srand(time(0));
 	zoom = 700/std::max(SIZE.x, SIZE.y);
@@ -65,6 +65,18 @@ void init() {
 	displayLinks = false;
 	nightEnabled = true;
 
+
+	window.setPosition(sf::Vector2i(-10, 0));
+
+	button_fullscreen = new Button("fullscreen", sf::Vector2f(windowWidth - 30, 30));
+	button_pause = new Button("pause", sf::Vector2f(20, windowHeight - 100));
+	button_displayLinks = new Button("displayLinks", sf::Vector2f(55, windowHeight - 100));
+	button_fastMode = new Button("fastMode", sf::Vector2f(90, windowHeight - 100));
+	button_quadTree = new Button("quadTree", sf::Vector2f(125, windowHeight - 100));
+	button_nightEnabled = new Button("nightEnabled", sf::Vector2f(160, windowHeight - 100));
+}
+
+void initEnvironment() {
 	RectByCenter bd(multiplyVector(SIZE, 0.5), multiplyVector(SIZE, 0.5));
 	if (Q != nullptr) Q->del();
 	delete(Q);
@@ -78,18 +90,7 @@ void init() {
 	rect.radius = sf::Vector2f(SIZE.x / 2.0, SIZE.y / 2.0);
 	QuadTree quadTree(rect);
 	selectedCell = nullptr;
-	window.setPosition(sf::Vector2i(-10, 0));
 
-	button_fullscreen = new Button("fullscreen", sf::Vector2f(windowWidth - 30, 30));
-	button_pause = new Button("pause", sf::Vector2f(20, windowHeight - 100));
-	button_displayLinks = new Button("displayLinks", sf::Vector2f(55, windowHeight - 100));
-	button_fastMode = new Button("fastMode", sf::Vector2f(90, windowHeight - 100));
-	button_quadTree = new Button("quadTree", sf::Vector2f(125, windowHeight - 100));
-	button_nightEnabled = new Button("nightEnabled", sf::Vector2f(160, windowHeight - 100));
-}
-
-
-void generate(sf::RenderWindow& window) {
 	DNA* dna;
 	for (int i = 0; i < cellsNumber; i++) {
 		std::string text;
@@ -100,11 +101,15 @@ void generate(sf::RenderWindow& window) {
 		//text = "photosynthesis, slowClock, childIndex_0_1; explosive, electricitySensitive; noLink, link1";
 		text = "photosynthesis";
 		dna = new DNA(text);
-		for (int i = 0; i < initialMutations; i++) dna = new DNA(dna, 0.2);
+		for (int i = 0; i < initialMutations; i++) dna = new DNA(dna, 0.8);
 		Cell* NewCell = new Cell(sf::Vector2f(rand() % (int)SIZE.x, rand() % (int)SIZE.y), E, dna);
 		//Cell* NewCell = new Cell(sf::Vector2f(480, 600), E, dna);
 		E->addCell(NewCell);
 	}
+}
+
+void generate(sf::RenderWindow& window) {
+	initEnvironment();
 
 	sf::RenderTexture mapTexture;
 	mapTexture.create(SIZE.x, SIZE.y);
@@ -121,6 +126,7 @@ void generate(sf::RenderWindow& window) {
 		sf::Event event;
 		if (fastMode) window.setFramerateLimit(6000);
 		else window.setFramerateLimit(6000);
+
 		while (window.pollEvent(event)) {
 			if (event.type == sf::Event::Closed) { window.close(); return; }
 			else if (event.type == sf::Event::Resized) {
@@ -129,21 +135,22 @@ void generate(sf::RenderWindow& window) {
 				window.setView(sf::View(visibleArea));
 				windowWidth = event.size.width;
 				windowHeight = event.size.height;
-			} 
+			}
 
 			else if (event.type == sf::Event::MouseWheelMoved) {
 				int mdt = std::max(-1, std::min(event.mouseWheel.delta, 1));
 				zoom *= 1 + ((float)mdt) / 15;
 
-				map.setSize(multiplyVector(SIZE, zoom));				
-			}			
-			
-			
+				map.setSize(multiplyVector(SIZE, zoom));
+			}
+
+
 			else if (event.type == sf::Event::KeyPressed) {
 				if (event.key.code == sf::Keyboard::Up)	camPos.y -= 20/zoom;
 				if (event.key.code == sf::Keyboard::Down) camPos.y += 20/zoom;
 				if (event.key.code == sf::Keyboard::Left) camPos.x -= 20/zoom;
 				if (event.key.code == sf::Keyboard::Right) camPos.x += 20/zoom;
+				if (event.key.code == sf::Keyboard::R) initEnvironment();
 			}
 
 			else if (event.type == sf::Event::MouseButtonPressed) {
@@ -153,7 +160,7 @@ void generate(sf::RenderWindow& window) {
 						cellsSelected.clear();
 						float range = 100;
 
-						sf::Vector2f shift = addVectors(multiplyVector(camPos, -zoom), sf::Vector2f(windowWidth / 2, windowHeight / 2));	
+						sf::Vector2f shift = addVectors(multiplyVector(camPos, -zoom), sf::Vector2f(windowWidth / 2, windowHeight / 2));
 						sf::Vector2f relativeMousePos = sf::Vector2f((mouse.x - shift.x) / zoom, (mouse.y - shift.y) / zoom);
 						captureZone.center = relativeMousePos;
 						captureZone.radius = sf::Vector2f(range, range);
@@ -172,19 +179,18 @@ void generate(sf::RenderWindow& window) {
 								}
 							}
 						}
-						infoPanel->updateCell(selectedCell);
+						if (selectedCell) infoPanel->updateCell(selectedCell);
 					}
-					
+
 				}
 			}
 		}
 
-
-		if (not pause) {
+		if (! pause) {
 			E->frameNumber++;
 			if (E->Quad != nullptr) E->Quad->del();
-			int c = 0; 
-			while(c < E->cells.size()){ 
+			int c = 0;
+			while(c < E->cells.size()){
 				if (E->cells[c]->isDead()) {
 					delete E->cells[c]; // On supprime la cellule...
 					E->cells.erase(E->cells.begin()+c); // ... puis on supprime la "case" du std::vector correspondante
@@ -196,12 +202,11 @@ void generate(sf::RenderWindow& window) {
 			}
 
 			E->evolve();
-			if (selectedCell != nullptr) {
-				if (selectedCell->isDead()) {
-					selectedCell = nullptr;
-					infoPanel->updateCell(nullptr);
-				}
-			}
+
+		}
+		if (selectedCell && selectedCell->isDead()) {
+			selectedCell = nullptr;
+			infoPanel->updateCell(nullptr);
 		}
 		if (selectedCell == nullptr) {
 			E->updateCellFocus(sf::IntRect(0, 0, 0, 0));
@@ -211,19 +216,19 @@ void generate(sf::RenderWindow& window) {
 			float radius = selectedCell->getRadius();
 			E->updateCellFocus(sf::IntRect(pos.x - radius - 5, pos.y - radius - 5, 2 * radius + 10, 2 * radius + 10));
 		}
-		if (pause) fps = 0; 
+		if (pause) fps = 0;
 		else fps = (int)1.f / clockTime.restart().asSeconds();
-		
+
 		//display
 		window.clear();
-		if (not fastMode or E->frameNumber%100==1 or pause) {	
-			mapTexture.clear();		
+		if (! fastMode || E->frameNumber%100==1 || pause) {
+			mapTexture.clear();
 			E->display(mapTexture, displayLinks, nightEnabled);
 			if (displayQuadTree) Q->display(mapTexture);
 			map.setPosition(addVectors(multiplyVector(camPos, -zoom), sf::Vector2f(windowWidth/2, windowHeight/2)));
 			map.setTexture(&mapTexture.getTexture());
 			mapTexture.display();
-			
+
 		}
 		window.draw(map);
 		infoPanel->display(&window, fps, fastMode, nightEnabled);
@@ -231,7 +236,7 @@ void generate(sf::RenderWindow& window) {
 		if (button_pause->interact(mouse, clic)) pause = not pause;
 		if (button_quadTree->interact(mouse, clic)) displayQuadTree = not displayQuadTree;
 		if (button_fullscreen->interact(mouse, clic)) {
-			fullscreen = not fullscreen; 
+			fullscreen = not fullscreen;
 			if (fullscreen) window.create(sf::VideoMode(windowWidth, windowHeight), "Simulated Cells", sf::Style::Fullscreen);
 			else window.create(sf::VideoMode(windowWidth, windowHeight), "Simulated Cells");
 		}

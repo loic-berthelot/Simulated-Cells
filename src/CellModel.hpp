@@ -5,7 +5,8 @@
 
 class CellModel {
 	std::vector<std::string> roles;
-	std::vector<std::string> allRoles = {"photosynthesis", "fat", "root", "lung", "gill", "muscle", "bone", "reproducer", "water_reproducer", "poisonA", "poisonB", "poisonC", "antipoisonA", "antipoisonB", "antipoisonC", "explosive", "parasit", "antiparasit", "lifetime100", "lifetime300", "childIndexNull", "childIndex_1", "childIndex_2", "childIndex_5", "childIndex_0_1", "childIndexRandom", "noLink", "link1", "link2", "link5", "electricIncreaser", "electricDecreaser", "glue", "quickClock" , "mediumClock" , "slowClock", "electricitySensitive", "pressureSensitive", "waterSensor", "radioactiveSensor", "neighborsSensor", "enemiesSensor", "noGift", "greatGift", "quickDuplication", "slowDuplication"};
+	std::vector<std::string> allRoles = {"photosynthesis", "fat", "root", "lung", "gill", "muscle", "bone", "reproducer", "water_reproducer", "poisonA", "poisonB", "poisonC", "antipoisonA", "antipoisonB", "antipoisonC", "explosive", "parasit", "antiparasit", "lifetime100", "lifetime300", "noLink", "link1", "link2", "link5", "electricIncreaser", "electricDecreaser", "glue", "quickClock" , "mediumClock" , "slowClock", "electricitySensitive", "pressureSensitive", "waterSensor", "radioactiveSensor", "neighborsSensor", "enemiesSensor", "noGift", "greatGift", "quickDuplication", "slowDuplication"};
+	//, "childIndexNull", "childIndex_1", "childIndex_2", "childIndex_5", "childIndex_0_1", "childIndexRandom",
 public :
 	bool contains(std::string role);
 	int count(std::string role);

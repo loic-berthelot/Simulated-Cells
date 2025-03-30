@@ -39,10 +39,11 @@ std::string CellModel::getText() {
 
 void CellModel::mutate(CellModel* model, float mutationRate) {
 	roles.clear();
+	int additiveMutations = rand()%3;
 	for (int i = 0; i < model->roles.size(); i++) {
 		if (rand() % 1001 >= mutationRate * 1000) roles.push_back(model->roles[i]);
-		for (int j = 0; j < 3; j++) {
-			if (roles.size() < 5 and rand() % 1001 < mutationRate * 1000) roles.push_back(allRoles[rand() % allRoles.size()]);
+		for (int j = 0; j < additiveMutations; j++) {
+			if (roles.size() < 5 && rand() % 1001 < mutationRate * 1000) roles.push_back(allRoles[rand() % allRoles.size()]);
 		}
 	}
 	if (roles.size() == 0) roles.push_back(allRoles[rand() % allRoles.size()]);

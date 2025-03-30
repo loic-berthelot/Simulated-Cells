@@ -1,5 +1,44 @@
 #include "Cell.hpp"
 
+
+Cell::Cell(sf::Vector2f position, Environment* Env, DNA* _dna, int _modelIndex) {
+	sprite.setPosition(position);
+	this->Env = Env;
+	dna = _dna;
+	if (dna == nullptr) dna = new DNA();
+	dna->incrementCellsNumber();
+	modelIndex = _modelIndex;
+
+	pressure = 0;
+	speed = sf::Vector2f(0, 0);
+	acceleration = sf::Vector2f(0, 0);
+	dead = false;
+	color = dna->getColor();
+	timeAlive = 0;
+	borderSize = 2;
+
+	neighbors.clear();
+	linkedNeighbors.clear();
+	sprite.setFillColor(color);
+
+	applyRoles();
+	if (borderSize != 0) {
+		sprite.setOutlineThickness(borderSize);
+		sprite.setOutlineColor(borderColor);
+	}
+}
+
+Cell::~Cell() {
+	for (int i = 0; i < neighbors.size(); i++) {
+		neighbors[i]->removeInteraction(this);
+	}
+	for (int i = 0; i < linkedNeighbors.size(); i++) {
+		linkedNeighbors[i]->removeInteraction(this);
+	}
+	dna->decrementCellsNumber();
+	if (dna->getCellsNumber() == 0) delete dna;
+}
+
 void Cell::removeInteraction(Cell* cell)
 {
 	for (int i = 0; i < neighbors.size(); i++) {
@@ -32,41 +71,60 @@ char Cell::getBiome() {
 float Cell::getRadius() {
 	return radius;
 }
+float Cell::calculateMetabolism() {
+	float result = mass * 0.0001;
+	if (hasRole("lung")) result += 0.03;
+	if (hasRole("gill")) result += 0.03;
+	if (hasRole("root")) result += 0.05;
+	if (hasRole("fat")) result += 0.03;
+	if (hasRole("photosynthesis")) result += 0.02;
+	if (hasRole("poisonA")) result += 1;
+	if (hasRole("poisonB")) result += 0.7;
+	if (hasRole("poisonC")) result += 0.4;
+	if (hasRole("antipoisonA")) result += 0.2;
+	if (hasRole("antipoisonB")) result += 0.14;
+	if (hasRole("antipoisonC")) result += 0.08;
+	if (hasRole("explosive")) result += 0.01;
+	if (hasRole("parasit")) result += 0.03;
+	if (hasRole("antiparasit")) result += 0.06;
+	if (hasRole("bone")) result += 0.07;
+	/*
+	if (hasRole("electricIncreaser")+hasRole("electricDecreaser")==1) result += 0.01;
+	if (hasRole("quickClock") or hasRole("mediumClock") or hasRole("slowClock")) result += 0.01;
+	if (hasRole("waterSensor") or hasRole("radioactiveSensor") or hasRole("neighborsSensor") or hasRole("enemiesSensor")) result += 0.1;*/
+	result *= 1;
+	return result;
+}
 
+int Cell::calculateDuplicationSpan() {
+	int result;
+	if (hasRole("quickDuplication")) result = 30;
+	else if (hasRole("slowDuplication")) result = 120;
+	else result = 60;
+	return result;
+}
 void Cell::applyRoles() {
 	borderColor = sf::Color::White;
 	defaultSize = dna->getRadius(modelIndex);
 	reproductionRate = 0.005;
-	maxPressure = defaultSize * 1;
+	maxPressure = defaultSize * 0.5;
 	randomMovementRate = 1;
 	roughness = 0.05;
 	elasticity = 0.2;
-	if (hasRole("fat"))	maxPressure *= 2;
 	if (hasRole("bone"))  {
-		maxPressure *= 4;
+		maxPressure *= 2;
 		elasticity = 0.05;
+	} else if (hasRole("fat")) {
+		maxPressure *= 2;
 	}
-	metabolism = mass * 0.001;
-	if (hasRole("lung")) metabolism += 0.01;
-	if (hasRole("gill")) metabolism += 0.01;
-	if (hasRole("root")) metabolism += 0.01;
-	if (hasRole("poisonA")) metabolism += 0.03;
-	if (hasRole("poisonB")) metabolism += 0.03;
-	if (hasRole("poisonC")) metabolism += 0.03;
-	if (hasRole("antipoisonA")) metabolism += 0.015;
-	if (hasRole("antipoisonB")) metabolism += 0.015;
-	if (hasRole("antipoisonC")) metabolism += 0.015;
-	if (hasRole("explosive")) metabolism += 0.01;
-	if (hasRole("parasit")) metabolism += 0.02;
-	if (hasRole("antiparasit")) metabolism += 0.01;
-	if (hasRole("electricIncreaser")+hasRole("electricDecreaser")==1) metabolism += 0.01;
-	if (hasRole("quickClock") or hasRole("mediumClock") or hasRole("slowClock")) metabolism += 0.01;
-	if (hasRole("waterSensor") or hasRole("radioactiveSensor") or hasRole("neighborsSensor") or hasRole("enemiesSensor")) metabolism += 0.1;	
-	if (hasRole("lifetime300"))	lifetime = 300;
-	else if (hasRole("lifetime100")) lifetime = 100;
-	else {
-		lifetime = -1;
-		metabolism += 0.02;
+	mass = defaultSize * defaultSize;
+	metabolism = calculateMetabolism();
+	if (hasRole("lifetime300")) {
+		lifetime = 300;
+	} else if (hasRole("lifetime100")) {
+		lifetime = 100;
+	} else {
+		lifetime = 500;// -1;
 	}
 	if (hasRole("pressureSensitive")) maxPressure *= 0.33333;
 	else metabolism += 0.02;
@@ -75,18 +133,17 @@ void Cell::applyRoles() {
 	if (hasRole("noLink")) maxLinks = 0;
 	else maxLinks = 1000;
 	maxLinks += roleCount("link1") + 2 * roleCount("link2") + 5 * roleCount("link5");
-	if (hasRole("quickDuplication")) duplicationSpan = 25;
-	else if (hasRole("slowDuplication")) duplicationSpan = 140;
-	else duplicationSpan = 60;
+	duplicationSpan = calculateDuplicationSpan();
 	lastChildTime = Env->frameNumber;
 
 	updateRadius(defaultSize);
-	mass = defaultSize * defaultSize;
-	waterMax = 0.2 * mass;
-	oxygenMax = 0.2 * mass;
-	sugarMax = 0.2 * mass;
+	waterMax = 0.33 * mass;
+	oxygenMax = 0.33 * mass;
+	sugarMax = 0.33 * mass;
 	if (hasRole("fat")) {
-		sugarMax *= 4;
+		waterMax *= 2;
+		oxygenMax *= 2;
+		sugarMax *= 2;
 	}
 	if (Env->frameNumber == 0) {
 		water = waterMax;
@@ -99,8 +156,8 @@ void Cell::applyRoles() {
 		sugar = 0.25*sugarMax;
 	}
 	if (hasRole("noGift")) giftsMax = 0;
-	else if (hasRole("greatGift")) giftsMax = 0.02;
-	else giftsMax = 0.005;
+	else if (hasRole("greatGift")) giftsMax = 0.01;
+	else giftsMax = 0.002;
 	sizeProportion = 1;
 	electricCharge = 0;
 	electricPower = 0;
@@ -362,10 +419,13 @@ void Cell::updateForces() { //On considère pour l'instant que toutes les cellul
 	
 }
 
-void Cell::move() {
+void Cell::checkLifetime() {
 	timeAlive++;
 	if (lifetime > 0) lifetime--;
-	if (lifetime == 0) die();
+	else die();
+}
+
+void Cell::move() {
 	sprite.move(multiplyVector(movement, 1-roughness));
 	movement = sf::Vector2f(0, 0);
 	speed = multiplyVector(addVectors(speed, movement), 1 - roughness);
@@ -380,24 +440,24 @@ void Cell::move() {
 		speed = sf::Vector2f(0, 0);
 	}
 
-	duplicate();
-
 	if (hasRole("root")) addWater(0.01*abs(electricPower)*radius);
-	if (getBiome() == 'w' or getBiome() == 's') {
+	if (getBiome() == 'w' || getBiome() == 's'|| getBiome() == 'r') {
 		addWater(0.04 * radius);
-		
 		if (hasRole("gill")) addOxygen(0.2);
 	} else {
 		if (hasRole("lung")) addOxygen(0.2);
 	}
-	if (getBiome() == 's') {
-		addSugar(0.1 * radius);
+	if (getBiome() == 's' || getBiome() == 'r' ) {
+		addSugar(0.2 * radius);
 	}
-	if (hasRole("photosynthesis") and not Env->isNight()) {
-		addOxygen(1 * water / waterMax);
-		addSugar(1 * water / waterMax);
-		consumeWater(1 * water / waterMax);
+	float photosynthesisSpeed = 0;
+	if (hasRole("photosynthesis") && (getBiome() =='l' || !Env->isNight())) {
+		photosynthesisSpeed = 1;
+		if (getBiome() =='l' && !Env->isNight()) photosynthesisSpeed = 2;
 	}
+	addOxygen(photosynthesisSpeed * water / waterMax);
+	addSugar(photosynthesisSpeed * water / waterMax);
+	consumeWater(photosynthesisSpeed * water / waterMax);
 	consumeOxygen(metabolism);
 	consumeSugar(metabolism);
 }
@@ -436,9 +496,9 @@ void Cell::accelerate(sf::Vector2f force) {
 
 void Cell::die() {
 	if (not dead) {
-		float waterAmount = 0.3 * water + 0.03 * mass;
-		float oxygenAmount = 0.3 * oxygen + 0.03 * mass;
-		float sugarAmount = 0.3 * sugar + 0.03 * mass;
+		float waterAmount = 0.66 * water + 0.066 * mass;
+		float oxygenAmount = 0.66 * oxygen + 0.066 * mass;
+		float sugarAmount = 0.66 * sugar + 0.066 * mass;
 		float size = neighbors.size();
 		for (int i = 0; i < size; i++) {
 			neighbors[i]->addWater(waterAmount / size);
@@ -468,16 +528,17 @@ void Cell::checkHealth() {
 }
 
 int Cell::nextModelIndex() {
-	if (nextIndex == -1) nextIndex = (modelIndex + dna->getModel(modelIndex)->getChildIndexShift()) % dna->modelsNumber();
+	if (nextIndex == -1) nextIndex = (modelIndex + 1+0*dna->getModel(modelIndex)->getChildIndexShift()) % dna->modelsNumber();
 	return nextIndex; ;
 }
 
 void Cell::duplicate() {
-	if (linkedNeighbors.size() < maxLinks and Env->frameNumber - lastChildTime >= duplicationSpan) {
+	if (linkedNeighbors.size() < maxLinks && Env->frameNumber - lastChildTime >= duplicationSpan && pressure <= 1 && rand()%10 == 0) {
 		float mutationRate = 0;
-		if (hasRole("reproducer") and rand() % 2 == 0) mutationRate += 0.15;
-		else if (hasRole("water_reproducer") and getBiome() == 'w' and rand() % 2 == 0) mutationRate += 0.15;
-		if (getBiome() == 'r') mutationRate += 0.15;
+		if (rand() % 100 == 0) mutationRate += 0.15;
+		if (hasRole("reproducer") && rand() % 4 == 0) mutationRate += 0.15;
+		else if (hasRole("water_reproducer") && getBiome() == 'w' && rand() % 4 == 0) mutationRate += 0.15;
+		if (getBiome() == 'r' && rand() % 4 == 0) mutationRate += 0.15;
 		DNA* dna2;
 		int nextIndex;
 		if (mutationRate > 0) {
@@ -489,10 +550,10 @@ void Cell::duplicate() {
 		}
 		float size2 = dna2->getRadius(nextIndex);
 		float mass2 = size2 * size2;
-		if (water >= 10 + 0.1 * mass2 and oxygen >= 10 + 0.1 * mass2 and sugar >= 10 + 0.1 * mass2) {
-			consumeWater(5 + 0.1 * mass2);
-			consumeOxygen(5 + 0.1 * mass2);
-			consumeSugar(5 + 0.1 * mass2);
+		if (water >= 5 + 0.1 * mass2 and oxygen >= 5 + 0.1 * mass2 and sugar >= 5 + 0.1 * mass2) {
+			consumeWater(0 + 0.1 * mass2);
+			consumeOxygen(0 + 0.1 * mass2);
+			consumeSugar(0 + 0.1 * mass2);
 			Cell* cell = new Cell(getPosition(), Env, dna2, nextIndex);
 			Env->addCell(cell);
 			cell->sprite.setPosition(addVectors(sprite.getPosition(), normalizeVector(acceleration, radius+cell->radius)));

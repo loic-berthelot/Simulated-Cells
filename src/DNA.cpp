@@ -20,9 +20,10 @@ void DNA::parseText(std::string text) {
 
 void DNA::mutate(DNA* dna, float mutationRate) {
 	models.clear();
+	int additiveMutations = rand()%3;
 	for (int i = 0; i < dna->models.size(); i++) {
 		if (rand() % 1001 >= mutationRate * 1000) models.push_back(new CellModel(dna->models[i], 0.05));
-		for (int j = 0; j < 3; j++) {
+		for (int j = 0; j < additiveMutations; j++) {
 			if (models.size() < 5 and rand() % 1001 < mutationRate * 1000) models.push_back(new CellModel(dna->models[i], 0.5));
 		}
 	}

@@ -13,17 +13,17 @@ class Cell
 	float pressure, maxPressure, radius;
 	float mass;
 	float defaultSize; // La taille de la cellule lorsqu'elle ne subit aucune contrainte
-	float roughness; // Plus la rugosité est importante, plus la cellule perd rapidement son élan
+	float roughness; // Plus la rugositï¿½ est importante, plus la cellule perd rapidement son ï¿½lan
 	sf::Color color, borderColor;
-	std::vector<Cell*> neighbors; //Les cellules voisines, qui peuvent exercer une pression sur la cellule (et plus tard échanger des ressources et des signaux électriques)
-	std::vector<Cell*> linkedNeighbors; //Les cellules voisines accrochées, qui peuvent exercer une traction sur la cellule
+	std::vector<Cell*> neighbors; //Les cellules voisines, qui peuvent exercer une pression sur la cellule (et plus tard ï¿½changer des ressources et des signaux ï¿½lectriques)
+	std::vector<Cell*> linkedNeighbors; //Les cellules voisines accrochï¿½es, qui peuvent exercer une traction sur la cellule
 	Environment* Env;
 	DNA* dna;
 	int modelIndex;
-	int maxLinks; // Le nombre maximal de voisines liées qu'une cellule peut avoir. cela vaut pour les cellules rencontrées ainsi que pour les nouvelles cellules.
-	float elasticity; // L'élasticité est un coefficient qui, multiplié au rayon de la cellule, indique à partir de quelle distance la cellule est attirée par ses voisines liées
+	int maxLinks; // Le nombre maximal de voisines liï¿½es qu'une cellule peut avoir. cela vaut pour les cellules rencontrï¿½es ainsi que pour les nouvelles cellules.
+	float elasticity; // L'ï¿½lasticitï¿½ est un coefficient qui, multipliï¿½ au rayon de la cellule, indique ï¿½ partir de quelle distance la cellule est attirï¿½e par ses voisines liï¿½es
 	bool dead;
-	float reproductionRate; // Le premier argument est le numérateur et le second le dénominateur
+	float reproductionRate; // Le premier argument est le numï¿½rateur et le second le dï¿½nominateur
 	float randomMovementRate;
 	sf::Vector2f movement;
 	int timeAlive, lifetime, duplicationSpan, lastChildTime;
@@ -49,48 +49,14 @@ public:
 	void applyRoles();
 	char getBiome();
 	float getRadius();
+	float calculateMetabolism();
+	int calculateDuplicationSpan();
 	float getWaterProportion();
 	float getOxygenProportion();
 	float getSugarProportion();
-	Cell(sf::Vector2f position, Environment* Env, DNA* _dna = nullptr, int _modelIndex = 0) {
-		sprite.setPosition(position);
-		this->Env = Env;
-		dna = _dna;
-		if (dna == nullptr) dna = new DNA();
-		dna->incrementCellsNumber();
-		modelIndex = _modelIndex;
-		
-		pressure = 0;
-		speed = sf::Vector2f(0, 0);
-		acceleration = sf::Vector2f(0, 0);
-		dead = false;
-		color = dna->getColor();
-		timeAlive = 0;
-		borderSize = 2;
-
-		neighbors.clear();
-		linkedNeighbors.clear();
-		sprite.setFillColor(color);
-
-		applyRoles();
-		
-		if (borderSize != 0) {
-			sprite.setOutlineThickness(borderSize);
-			sprite.setOutlineColor(borderColor);
-		}
-	}
-	
-	~Cell() {
-		for (int i = 0; i < neighbors.size(); i++) {
-			neighbors[i]->removeInteraction(this);
-		}
-		for (int i = 0; i < linkedNeighbors.size(); i++) {
-			linkedNeighbors[i]->removeInteraction(this);
-		}
-		dna->decrementCellsNumber();
-		if (dna->getCellsNumber() == 0) delete dna;
-	}
-	sf::CircleShape* getSprite(); //Au cas où on fait le travail proprement avec des getters
+	Cell(sf::Vector2f position, Environment* Env, DNA* _dna = nullptr, int _modelIndex = 0);
+	~Cell();
+	sf::CircleShape* getSprite(); //Au cas oï¿½ on fait le travail proprement avec des getters
 	void updateNeighbors();
 	void addOxygen(float amount);
 	void addWater(float amount);
@@ -99,6 +65,7 @@ public:
 	void consumeWater(float amount);
 	void consumeSugar(float amount);
 	void updateForces();
+	void checkLifetime();
 	void move();
 	void accelerate(sf::Vector2f force);
 	void die();

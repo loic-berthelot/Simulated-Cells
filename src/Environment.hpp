@@ -1,6 +1,6 @@
 #pragma once
 #include "commons.hpp"
-
+#include <cmath>
 extern bool nightEnabled;
 
 class QuadTree;
@@ -49,6 +49,8 @@ public:
 					biome_grid[y][x] = 'r';
 				} else if (c == sf::Color(240, 30, 100)) {
 					biome_grid[y][x] = 's';
+				} else if (c == sf::Color(255, 255, 255)) {
+					biome_grid[y][x] = 'l';
 				}
 				else {
 					biome_grid[y][x] = 'd';
@@ -60,8 +62,8 @@ public:
 		_spriteTexture.loadFromImage(background);
 		sprite.setTexture(std::ref(_spriteTexture));
 		frameNumber = 0;
-		dayDuration = 2000;
-		nightDuration = 2000;
+		dayDuration = 1000;
+		nightDuration = 1000;
 
 		nightCache.setSize(mapSize);
 		nightCache.setFillColor(sf::Color(0, 0, 0, 75));
